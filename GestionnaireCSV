@@ -1,0 +1,21 @@
+__author__ = 'SYSCORE'
+import csv
+#
+# Class: Ecrivain de CSV
+#
+#
+#
+
+class _CSVWriter:
+    def __init__( self, fileName):
+        try:
+
+            self. csvFile = open( fileName, 'wb')
+            self. writer = csv. writer( self. csvFile, delimiter =',', quoting = csv.QUOTE_ALL)
+            self. writer. writerow( ('Protocol','Source IP', 'Source du Port','Déstination IP', 'Port de Déstination' ) )
+        except:
+            log.error('Echec du fichier CSV')
+    def writeCSVRow( self, row):
+        self. writer. writerow( ( row[0], row[1], str( row[2]), row[3], str( row[4]) ) )
+    def __del__( self):
+        self. csvFile. close()
