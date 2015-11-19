@@ -1,0 +1,108 @@
+__author__ = 'SYSCORE'
+#
+#
+# Outil de Monitoring et de Cartographie Réseau Passif en Python
+
+# Importer les Modules de Bibliothèques Standards
+import socket
+import signal
+import os
+import sys
+
+
+import Decodeur
+import AnalyseurDeCommande
+import GestionnaireCSV
+from ClassLogging import _ForensicLog
+
+
+userArgs = AnalyseurDeCommande.ParseCommandLine()
+
+logPath = os.path.join( userArgs.outPath, "ForensicLog.txt" )
+oLog = _ForensicLog( logPath)
+oLog.writeLog( "INFO" , "OMRSP a commencé" )
+csvPath = os.path.join( userArgs.outPath, "ResultatOMRSP.csv" )
+oCSV = GestionnaireCSV._CSVWriter( csvPath)
+
+
+if userArgs.TCP:
+    PROTOCOL = socket.IPPROTO_TCP
+elif userArgs.UDP:
+    PROTOCOL = socket.IPPROTO_UDP
+else:
+    print 'La Capture du Potocol non séléctionnée'
+sys. exit()
+
+
+if userArgs.verbose:
+    VERBOSE = True
+else:
+    VERBOSE = False
+
+captureDuration = userArgs.minutes * 60
+
+class myTimeout( Exception):
+    pass
+
+def handler( signum, frame):
+    print'timeout received', signum
+    raise myTimeout()
+
+ret = os.system( "ifconfig eth0 promisc" )
+if ret == 0:
+    oLog.writeLog( "INFO" , 'Mode Promiscious Activé')
+
+    try:
+        mySocket = socket.socket( socket.AF_INET, socket.SOCK_RAW,
+        PROTOCOL)
+        oLog.writeLog( "INFO" , 'Ligne Socket Ouverte')
+    except:
+
+        oLog.writeLog( "ERROR" , 'Ouverture de la Ligne Socket Echouée')
+        del oLog
+        if VERBOSE:
+            print'Erreur d\'ouverture de la Ligne Socket'
+            sys. exit()
+
+
+    signal.signal( signal.SIGALRM, handler)
+    signal.alarm( captureDuration)
+
+    ipObservations =[]
+
+
+    try:
+        while True:
+
+            recvBuffer, addr = mySocket.recvfrom( 255)
+
+            content = Decodeur.PacketExtractor( recvBuffer, VERBOSE)
+
+            ipObservations.append( content)
+
+            oLog.writeLog('INFO', \
+            'RECV:' + content[0] + \
+            'SRC :' + content[1] + \
+            'DST :' + content[3])
+    except myTimeout:
+        pass
+
+    ret = os.system( "ifconfig eth0 -promisc" )
+    oLog.writeLog( "INFO" , 'Mode Promiscious Désactivé')
+
+    mySocket.close()
+    oLog.writeLog( "INFO" , 'Ligne Socket Fermée')
+
+    uniqueSrc = set( map( tuple, ipObservations))
+    finalList = list( uniqueSrc)
+    finalList.sort()
+
+
+    for packet in finalList:
+        oCSV.writeCSVRow( packet)
+        oLog.writeLog('INFO', 'Programme Terminé')
+
+        del oLog
+        del oCSV
+else:
+    print'Mode Promiscious Désinstallé'
