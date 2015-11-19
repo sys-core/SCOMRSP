@@ -1,0 +1,27 @@
+__author__ = 'SYSCORE'
+
+
+import argparse
+import os
+
+def ParseCommandLine():
+    parser = argparse.ArgumentParser('OMRSP')
+    parser.add_argument('-v', '--verbose', help = "Afficher les détails du Paquet" , action = 'store_true')
+
+    group = parser.add_mutually_exclusive_group( required = True)
+    group.add_argument('--TCP', help ='Capture de Paquet TCP', action ='store_true')
+    group.add_argument('--UDP', help ='Capture de Paquet UDP', action ='store_true')
+    parser.add_argument('-m', '--minutes', help ='Capture Duration in minutes', type = int)
+    parser.add_argument('-p', '--outPath', type = ValidateDirectory, required = True, help = "Output Directory" )
+    theArgs = parser.parse_args()
+    return theArgs
+
+def ValidateDirectory( theDir):
+
+    if not os.path.isdir( theDir):
+        raise argparse.ArgumentTypeError('Le répertoire n\'existe pas')
+
+    if os.access( theDir, os.W_OK):
+        return theDir
+    else:
+        raise argparse.ArgumentTypeError('Le répertoire n\'admet pas d\'écriture')
