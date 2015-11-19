@@ -1,0 +1,102 @@
+__author__ = 'SYSCORE'
+#
+#Module Extracteur / Décodeur de Paquets
+#
+
+import socket, sys
+from struct import *
+
+PROTOCOL_TCP = 6
+PROTOCOL_UDP = 17
+
+def PacketExtractor( packet, displaySwitch):
+
+    stripPacket = packet[0: 20]
+
+    ipHeaderTuple = unpack('!BBHHHBBH4s4s' , stripPacket)
+
+    verLen = ipHeaderTuple[0]
+    dscpECN = ipHeaderTuple[1]
+
+    packetLength = ipHeaderTuple[2]
+    packetID = ipHeaderTuple[3]
+    flagFrag = ipHeaderTuple[4]
+
+    timeToLive = ipHeaderTuple[5]
+    protocol = ipHeaderTuple[6]
+    checkSum = ipHeaderTuple[7]
+    sourceIP = ipHeaderTuple[8]
+    destIP = ipHeaderTuple[9]
+
+    version = verLen >> 4
+
+    length = verLen & 0x0F
+
+    ipHdrLength = length * 4
+    bytes
+
+
+    sourceAddress = socket.inet_ntoa( sourceIP);
+    destinationAddress = socket.inet_ntoa( destIP);
+    if displaySwitch:
+        print' ¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼¼'
+        print'IP HEADER'
+        print'_______________________'
+        print'Version:' + str( version)
+        print'Longeur de Paquet:' + str( packetLength) +'octets'
+        print'Longeur d\'entête:' + str( ipHdrLength) +'octets'
+        print'TTL:' + str( timeToLive)
+        print'Protocol:' + str( protocol )
+        print'Checksum:' + hex( checkSum)
+        print'Source IP:' + str( sourceAddress)
+        print'Déstination IP:' + str( destinationAddress)
+        # _______________________
+    if protocol == PROTOCOL_TCP:
+        stripTCPHeader = packet[ipHdrLength: ipHdrLength +20]
+
+        tcpHeaderBuffer = unpack('!HHLLBBHHH' , stripTCPHeader)
+    sourcePort = tcpHeaderBuffer[0]
+    destinationPort = tcpHeaderBuffer[1]
+    sequenceNumber = tcpHeaderBuffer[2]
+    acknowledgement = tcpHeaderBuffer[3]
+    dataOffsetandReserve = tcpHeaderBuffer[4]
+    tcpHeaderLength = ( dataOffsetandReserve >> 4) * 4
+    tcpChecksum = tcpHeaderBuffer[7]
+    if displaySwitch:
+        print
+        print'TCP Header'
+        print'_______________________'
+        print'Source Port: ' + str( sourcePort)
+        print'Déstination Port :' + str( destinationPort)
+        print'Numéro de Sequence : ' + str( sequenceNumber)
+        print'Acknowledgement : ' + str( acknowledgement)
+        print'Longeur d\'entête TCP : ' + str( tcpHeaderLength) +
+        'bytes'
+        print'TCP Checksum:' + hex( tcpChecksum)
+        print
+        return(['TCP', sourceAddress, sourcePort, destinationAddress,
+        destinationPort])
+    elif protocol == PROTOCOL_UDP:
+        stripUDPHeader = packet[ipHdrLength: ipHdrLength+8]
+
+        udpHeaderBuffer = unpack('!HHHH' , stripUDPHeader)
+        sourcePort = udpHeaderBuffer[0]
+        destinationPort = udpHeaderBuffer[1]
+        udpLength = udpHeaderBuffer[2]
+        udpChecksum = udpHeaderBuffer[3]
+        if displaySwitch:
+            print
+            print'entête UDP'
+            print'_______________________'
+            print'Source du Port: ' + str( sourcePort)
+            print'Déstination du Port :' + str( destinationPort)
+            print'Longeur UDP : ' + str( udpLength) +'bytes'
+            print 'UDP Checksum: ' + hex( udpChecksum)
+            print
+        return(['UDP', sourceAddress, sourcePort, destinationAddress, destinationPort])
+    else:
+
+        if displaySwitch:
+            print' Protocol Trouvé :' + str( protocol )
+    return(['Non Supporté', sourceAddress, 0, \
+            destinationAddress, 0])
